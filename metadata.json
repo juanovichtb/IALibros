@@ -1,0 +1,6 @@
+{
+  "name": "Mi Diario de Lectura",
+  "description": "Una aplicación web completa y funcional en español para registrar, calificar y organizar tus lecturas, con persistencia real.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
