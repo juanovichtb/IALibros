@@ -129,7 +129,7 @@ export default function BookListView({
       </div>
 
       {/* Scrollable Book Cards Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-24">
+      <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pb-24 content-start">
         {filteredBooks.length > 0 ? (
           filteredBooks.map((book, index) => {
             const hasCover = book.cover_url && book.cover_url.trim() !== "";

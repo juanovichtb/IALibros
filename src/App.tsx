@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Book } from "./types";
 import WelcomeView from "./components/WelcomeView";
@@ -6,6 +6,8 @@ import BookListView from "./components/BookListView";
 import BookFormView from "./components/BookFormView";
 import BookDetailView from "./components/BookDetailView";
 import StatsView from "./components/StatsView";
+import TriviaView from "./components/TriviaView";
+import AboutView from "./components/AboutView";
 import { 
   BookMarked, 
   Plus, 
@@ -20,7 +22,10 @@ import {
   Battery, 
   ShieldCheck, 
   Mail, 
-  BookOpen
+  BookOpen,
+  Download,
+  Upload,
+  Globe
 } from "lucide-react";
 import { 
   auth, 
@@ -32,7 +37,7 @@ import {
 } from "./firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 
-type TabType = "list" | "add" | "stats" | "profile";
+type TabType = "list" | "add" | "stats" | "trivia" | "profile";
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -48,6 +53,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [currentTime, setCurrentTime] = useState("");
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
 
   // Status bar simulated clock
   useEffect(() => {
@@ -68,13 +74,22 @@ export default function App() {
       setLoading(true);
       setError(null);
       if (user) {
+        localStorage.removeItem("diario_lectura_active_guest");
         setCurrentUser(user);
         setView("tabs");
         await loadBooks(user.uid);
       } else {
-        setCurrentUser(null);
-        setView("welcome");
-        setBooks([]);
+        const savedGuest = localStorage.getItem("diario_lectura_active_guest");
+        if (savedGuest) {
+          const parsedUser = JSON.parse(savedGuest);
+          setCurrentUser(parsedUser);
+          setView("tabs");
+          await loadBooks(parsedUser.uid);
+        } else {
+          setCurrentUser(null);
+          setView("welcome");
+          setBooks([]);
+        }
       }
       setLoading(false);
     });
@@ -95,11 +110,17 @@ export default function App() {
     try {
       setLoading(true);
       setError(null);
-      const data = await getBooksByUserId(userId);
-      setBooks(data);
+      if (userId === "guest_local_user") {
+        const localData = localStorage.getItem("diario_lectura_local_books");
+        const parsed = localData ? JSON.parse(localData) : [];
+        setBooks(parsed);
+      } else {
+        const data = await getBooksByUserId(userId);
+        setBooks(data);
+      }
     } catch (err: any) {
       console.error(err);
-      setError("Error al cargar los libros desde Firestore.");
+      setError("Error al cargar los libros.");
       setToast({ message: "Error al sincronizar datos", type: "error" });
     } finally {
       setLoading(false);
@@ -112,19 +133,47 @@ export default function App() {
     const isEditing = !!bookPayload.id;
 
     try {
-      if (isEditing) {
-        await updateBook(bookPayload.id, bookPayload);
-        setToast({ message: "¡Libro actualizado correctamente!", type: "success" });
+      if (currentUser.uid === "guest_local_user") {
+        const localData = localStorage.getItem("diario_lectura_local_books");
+        let localBooks: Book[] = localData ? JSON.parse(localData) : [];
+        
+        if (isEditing) {
+          localBooks = localBooks.map((b) => 
+            b.id === bookPayload.id 
+              ? { ...b, ...bookPayload, id: bookPayload.id } 
+              : b
+          );
+          setToast({ message: "¡Libro actualizado localmente!", type: "success" });
+        } else {
+          const newBook: Book = {
+            ...bookPayload,
+            id: `local_${Date.now()}`,
+            created_at: new Date().toISOString(),
+            reader_id: 1
+          };
+          localBooks.unshift(newBook);
+          setToast({ message: "¡Libro registrado localmente con éxito!", type: "success" });
+        }
+        localStorage.setItem("diario_lectura_local_books", JSON.stringify(localBooks));
+        setBooks(localBooks);
+        setSelectedBook(null);
+        setActiveTab("list");
+        setView("tabs");
       } else {
-        await addBook(currentUser.uid, bookPayload);
-        setToast({ message: "¡Libro registrado con éxito!", type: "success" });
-      }
+        if (isEditing) {
+          await updateBook(bookPayload.id, bookPayload);
+          setToast({ message: "¡Libro actualizado correctamente!", type: "success" });
+        } else {
+          await addBook(currentUser.uid, bookPayload);
+          setToast({ message: "¡Libro registrado con éxito!", type: "success" });
+        }
 
-      // Reload books and reset views
-      await loadBooks(currentUser.uid);
-      setSelectedBook(null);
-      setActiveTab("list");
-      setView("tabs");
+        // Reload books and reset views
+        await loadBooks(currentUser.uid);
+        setSelectedBook(null);
+        setActiveTab("list");
+        setView("tabs");
+      }
     } catch (err: any) {
       console.error(err);
       setToast({ message: "Error al guardar el libro", type: "error" });
@@ -137,14 +186,26 @@ export default function App() {
     if (!currentUser || !selectedBook) return;
 
     try {
-      await deleteBook(selectedBook.id.toString());
-      setToast({ message: "Libro eliminado de tu biblioteca", type: "success" });
-      
-      // Reload books and reset views
-      await loadBooks(currentUser.uid);
-      setSelectedBook(null);
-      setActiveTab("list");
-      setView("tabs");
+      if (currentUser.uid === "guest_local_user") {
+        const localData = localStorage.getItem("diario_lectura_local_books");
+        let localBooks: Book[] = localData ? JSON.parse(localData) : [];
+        localBooks = localBooks.filter((b) => b.id !== selectedBook.id);
+        localStorage.setItem("diario_lectura_local_books", JSON.stringify(localBooks));
+        setBooks(localBooks);
+        setToast({ message: "Libro eliminado localmente", type: "success" });
+        setSelectedBook(null);
+        setActiveTab("list");
+        setView("tabs");
+      } else {
+        await deleteBook(selectedBook.id.toString());
+        setToast({ message: "Libro eliminado de tu biblioteca", type: "success" });
+        
+        // Reload books and reset views
+        await loadBooks(currentUser.uid);
+        setSelectedBook(null);
+        setActiveTab("list");
+        setView("tabs");
+      }
     } catch (err: any) {
       console.error(err);
       setToast({ message: "No se pudo eliminar el libro", type: "error" });
@@ -153,11 +214,83 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      await logoutUser();
-      setToast({ message: "Sesión cerrada correctamente", type: "success" });
+      localStorage.removeItem("diario_lectura_active_guest");
+      // Fire-and-forget logout asynchronously so network delays or iframe blocks don't hold up the UI
+      logoutUser().catch((err) => console.warn("Firebase logout warning (safe to ignore):", err));
     } catch (err) {
-      setToast({ message: "Error al cerrar sesión", type: "error" });
+      console.warn("Logout error:", err);
+    } finally {
+      // Instantly clear all client-side auth states
+      setCurrentUser(null);
+      setView("welcome");
+      setBooks([]);
+      setSelectedBook(null);
+      setActiveTab("list");
+      setToast({ message: "Sesión cerrada correctamente", type: "success" });
     }
+  };
+
+  const handleExportData = () => {
+    try {
+      if (books.length === 0) {
+        setToast({ message: "No hay libros en tu biblioteca para exportar", type: "error" });
+        return;
+      }
+      const dataStr = JSON.stringify(books, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      const filename = `mi_diario_lecturas_${new Date().toISOString().split('T')[0]}.json`;
+
+      const link = document.createElement('a');
+      link.setAttribute('href', dataUri);
+      link.setAttribute('download', filename);
+      link.click();
+      setToast({ message: "Copia de seguridad descargada", type: "success" });
+    } catch (err) {
+      console.error(err);
+      setToast({ message: "Error al exportar la biblioteca", type: "error" });
+    }
+  };
+
+  const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const fileReader = new FileReader();
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    fileReader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        if (!text) return;
+        const parsedData = JSON.parse(text);
+        
+        if (Array.isArray(parsedData)) {
+          const isValid = parsedData.every((item: any) => item && (item.title || item.author));
+          if (!isValid) {
+            setToast({ message: "El archivo no tiene un formato válido de libros", type: "error" });
+            return;
+          }
+
+          if (currentUser?.uid === "guest_local_user") {
+            localStorage.setItem("diario_lectura_local_books", JSON.stringify(parsedData));
+            setBooks(parsedData);
+            setToast({ message: "¡Biblioteca importada localmente!", type: "success" });
+          } else {
+            setToast({ message: "Importando libros en tu cuenta...", type: "success" });
+            for (const book of parsedData) {
+              const { id, created_at, ...cleanBook } = book;
+              await addBook(currentUser!.uid, cleanBook);
+            }
+            await loadBooks(currentUser!.uid);
+            setToast({ message: "¡Biblioteca importada y sincronizada!", type: "success" });
+          }
+        } else {
+          setToast({ message: "El formato debe ser un arreglo de libros", type: "error" });
+        }
+      } catch (err) {
+        console.error(err);
+        setToast({ message: "Error al importar el archivo JSON", type: "error" });
+      }
+    };
+    fileReader.readAsText(file, "UTF-8");
   };
 
   const handleSelectBook = (bookId: string | number) => {
@@ -191,20 +324,25 @@ export default function App() {
       </AnimatePresence>
 
       {/* Outer Smartphone Frame Wrapper (Desktop Only, Responsive Mobile Fills screen) */}
-      <div className="w-full max-w-md h-full sm:h-[840px] bg-[#2D2926] sm:rounded-[3rem] sm:border-[10px] sm:border-[#3E3C3A] sm:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col relative aspect-[9/19.5]">
+      <div className="w-full max-w-md md:max-w-5xl h-full sm:h-[840px] md:h-[760px] bg-[#2D2926] sm:rounded-[3rem] md:rounded-[2.5rem] sm:border-[10px] md:border-6 sm:border-[#3E3C3A] sm:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col relative aspect-[9/19.5] md:aspect-auto">
         
         {/* Simulated Phone Top Bezel / Dynamic Island / Notch */}
-        <div className="hidden sm:block absolute top-0 inset-x-0 h-7 bg-[#2D2926] z-50">
+        <div className="hidden sm:block md:hidden absolute top-0 inset-x-0 h-7 bg-[#2D2926] z-50">
           <div className="mx-auto w-32 h-4 bg-black rounded-b-xl absolute left-1/2 -translate-x-1/2 top-0"></div>
         </div>
 
         {/* Simulated Phone Status Bar */}
-        <div className="bg-white shrink-0 px-6 pt-3 pb-2 flex items-center justify-between text-xs font-semibold text-neutral-800 select-none z-40 border-b border-[#F5F2ED] sm:pt-6">
+        <div className="bg-white shrink-0 px-6 pt-3 pb-2 flex items-center justify-between text-xs font-semibold text-neutral-800 select-none z-40 border-b border-[#F5F2ED] sm:pt-6 md:pt-4">
           <span className="font-mono text-[11px]">{currentTime || "12:00"}</span>
-          <div className="flex items-center gap-1.5 text-neutral-700">
+          <div className="flex items-center gap-1.5 text-neutral-700 md:hidden">
             <Signal className="w-3.5 h-3.5" />
             <Wifi className="w-3.5 h-3.5" />
             <Battery className="w-4 h-4 text-neutral-800" />
+          </div>
+          {/* Elegant Desktop Branding text instead of mobile icons on wide screens */}
+          <div className="hidden md:flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-[#C4A484] font-bold">
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Mi Diario de Lectura</span>
           </div>
         </div>
 
@@ -262,6 +400,11 @@ export default function App() {
                   {/* ESTADISTICAS TAB */}
                   {activeTab === "stats" && (
                     <StatsView books={books} />
+                  )}
+
+                  {/* CURIOSIDADES / TRIVIA TAB */}
+                  {activeTab === "trivia" && (
+                    <TriviaView books={books} />
                   )}
 
                   {/* PERFIL / CUENTA TAB */}
@@ -335,6 +478,54 @@ export default function App() {
                           </div>
                         </div>
 
+                        {/* Interactive About Manual / Features section */}
+                        <div className="bg-white border border-[#E8E4DE] rounded-3xl p-5 shadow-2xs space-y-3">
+                          <span className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[#8B7E74]">
+                            Manual del Alquimista
+                          </span>
+                          <p className="text-[11px] text-[#8B7E74] leading-relaxed">
+                            ¿Quieres repasar todas las maravillosas funcionalidades que ofrece este santuario literario?
+                          </p>
+                          <button
+                            onClick={() => setIsAboutOpen(true)}
+                            className="w-full flex items-center justify-center gap-1.5 bg-[#C4A484] hover:bg-[#B39373] text-white py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-98"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Abrir Guía del Lector</span>
+                          </button>
+                        </div>
+
+                        {/* Backup & Safety Controls */}
+                        <div className="bg-white border border-[#E8E4DE] rounded-3xl p-5 shadow-2xs space-y-3">
+                          <span className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[#8B7E74]">
+                            Copia de Seguridad (Recomendado)
+                          </span>
+                          <p className="text-[11px] text-[#8B7E74] leading-relaxed">
+                            Resguarda tu biblioteca en un archivo descargable. Ideal para el modo Demo Local, para transferir tus libros a otro navegador o tener un respaldo seguro.
+                          </p>
+
+                          <div className="grid grid-cols-2 gap-2.5 pt-1">
+                            <button
+                              onClick={handleExportData}
+                              className="flex items-center justify-center gap-1.5 bg-[#F9F7F2] hover:bg-[#E8E4DE] text-[#3E3C3A] py-2.5 px-3 rounded-xl text-xs font-bold border border-[#E8E4DE] transition-all cursor-pointer active:scale-98"
+                            >
+                              <Download className="w-3.5 h-3.5 text-[#C4A484]" />
+                              <span>Exportar</span>
+                            </button>
+                            
+                            <label className="flex items-center justify-center gap-1.5 bg-[#F9F7F2] hover:bg-[#E8E4DE] text-[#3E3C3A] py-2.5 px-3 rounded-xl text-xs font-bold border border-[#E8E4DE] transition-all cursor-pointer active:scale-98 text-center">
+                              <Upload className="w-3.5 h-3.5 text-[#C4A484]" />
+                              <span>Importar</span>
+                              <input 
+                                type="file" 
+                                accept=".json" 
+                                onChange={handleImportData} 
+                                className="hidden" 
+                              />
+                            </label>
+                          </div>
+                        </div>
+
                         {/* Log out action */}
                         <button
                           onClick={handleLogout}
@@ -377,7 +568,7 @@ export default function App() {
 
           {/* PERSISTENT BOTTOM SWITCHER NAVIGATION BAR */}
           {view === "tabs" && (
-            <div className="absolute bottom-0 inset-x-0 bg-white border-t border-[#E8E4DE] py-2 px-3 flex justify-around items-center z-40 shadow-lg shrink-0">
+            <div className="absolute bottom-0 inset-x-0 bg-white border-t border-[#E8E4DE] py-2 px-3 flex justify-around items-center z-40 shadow-lg shrink-0 md:bottom-5 md:left-1/2 md:-translate-x-1/2 md:max-w-md md:rounded-full md:border md:shadow-xl md:bg-white/95 md:backdrop-blur-xs">
               {/* Tab 1: List */}
               <button
                 onClick={() => {
@@ -420,7 +611,21 @@ export default function App() {
                 <span className="text-[9px] font-bold font-mono tracking-wider uppercase">Estadísticas</span>
               </button>
 
-              {/* Tab 4: Profile */}
+              {/* Tab 4: Trivia / Oráculo */}
+              <button
+                onClick={() => {
+                  setSelectedBook(null);
+                  setActiveTab("trivia");
+                }}
+                className={`flex flex-col items-center gap-1 p-2.5 transition-colors cursor-pointer ${
+                  activeTab === "trivia" ? "text-[#C4A484]" : "text-stone-400 hover:text-stone-600"
+                }`}
+              >
+                <Globe className="w-5 h-5" />
+                <span className="text-[9px] font-bold font-mono tracking-wider uppercase">Oráculo</span>
+              </button>
+
+              {/* Tab 5: Profile */}
               <button
                 onClick={() => {
                   setSelectedBook(null);
@@ -449,9 +654,15 @@ export default function App() {
         </div>
 
         {/* Simulated Phone Home Button Indicator Bar (iOS style) */}
-        <div className="hidden sm:block absolute bottom-1.5 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/20 rounded-full z-50"></div>
+        <div className="hidden sm:block md:hidden absolute bottom-1.5 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/20 rounded-full z-50"></div>
       </div>
       
+      {/* Immersive Guide Modal */}
+      <AnimatePresence>
+        {isAboutOpen && (
+          <AboutView isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

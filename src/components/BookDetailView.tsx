@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { Book } from "../types";
-import { ArrowLeft, Edit2, Trash2, Calendar, BookOpen, Quote, Star, BarChart3, Clock, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Edit2, Trash2, Calendar, BookOpen, Quote, Star, BarChart3, Clock, AlertTriangle, Sparkles } from "lucide-react";
+import AestheticCardModal from "./AestheticCardModal";
 
 interface BookDetailViewProps {
   key?: any;
@@ -26,6 +27,7 @@ export default function BookDetailView({
 }: BookDetailViewProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Calculate average rating
   const avgRating = book.ratings && book.ratings.length > 0
@@ -85,6 +87,14 @@ export default function BookDetailView({
         </button>
 
         <div className="flex gap-1.5">
+          <button
+            onClick={() => setShowShareModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 border border-[#E8E4DE] hover:border-[#C4A484] text-[#C4A484] hover:bg-[#C4A484]/5 rounded-xl bg-white transition-all cursor-pointer active:scale-95 text-xs font-bold font-mono uppercase tracking-wider"
+            title="Diseñar tarjeta estética para Instagram"
+          >
+            <Sparkles className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Compartir</span>
+          </button>
           <button
             onClick={onEdit}
             className="p-2 border border-[#E8E4DE] hover:border-[#C4A484] text-[#3E3C3A] hover:text-[#C4A484] rounded-xl bg-white transition-all cursor-pointer active:scale-95"
@@ -246,6 +256,17 @@ export default function BookDetailView({
         </div>
         
       </div>
+
+      <AnimatePresence>
+        {showShareModal && (
+          <AestheticCardModal
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+            book={book}
+            avgRating={avgRating}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

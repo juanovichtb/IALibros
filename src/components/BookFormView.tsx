@@ -56,6 +56,7 @@ export default function BookFormView({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [coverSourceMode, setCoverSourceMode] = useState<"url" | "upload">("url");
+  const [isCompressing, setIsCompressing] = useState(false);
 
   // Populate form if editing
   useEffect(() => {
@@ -122,16 +123,70 @@ export default function BookFormView({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      setFormError("La imagen debe pesar menos de 2MB.");
-      return;
-    }
+    setFormError("");
+    setIsCompressing(true);
 
     const reader = new FileReader();
     reader.onload = (uploadEvent) => {
-      const base64Str = uploadEvent.target?.result as string;
-      setCoverUrl(base64Str);
+      const originalBase64 = uploadEvent.target?.result as string;
+
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+
+          // Target max dimension of 400px (standard cover portrait ratio is usually 3:4)
+          const MAX_DIM = 400;
+          if (width > height) {
+            if (width > MAX_DIM) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            }
+          } else {
+            if (height > MAX_DIM) {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            setCoverUrl(originalBase64);
+            setIsCompressing(false);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Compress as JPEG with 0.7 quality to get a very lightweight image (~15-30KB)
+          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
+          setCoverUrl(compressedBase64);
+        } catch (err) {
+          console.error("Error compressing image:", err);
+          setCoverUrl(originalBase64); // Fallback to original if compression fails
+        } finally {
+          setIsCompressing(false);
+        }
+      };
+
+      img.onerror = () => {
+        setFormError("No se pudo procesar la imagen seleccionada.");
+        setIsCompressing(false);
+      };
+
+      img.src = originalBase64;
     };
+
+    reader.onerror = () => {
+      setFormError("Error al leer el archivo de imagen.");
+      setIsCompressing(false);
+    };
+
     reader.readAsDataURL(file);
   };
 
@@ -339,10 +394,15 @@ export default function BookFormView({
                 accept="image/*"
                 onChange={handleFileUpload}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={isCompressing}
               />
-              <Upload className="w-5 h-5 text-[#8B7E74] mx-auto mb-1" />
-              <span className="text-xs font-semibold text-[#3E3C3A] block">Haz clic para subir imagen</span>
-              <span className="text-[9px] text-[#8B7E74] block">Soporta PNG, JPG menor a 2MB</span>
+              <Upload className="w-5 h-5 text-[#8B7E74] mx-auto mb-1 animate-pulse" />
+              <span className="text-xs font-semibold text-[#3E3C3A] block">
+                {isCompressing ? "Optimizando imagen..." : "Haz clic para subir imagen"}
+              </span>
+              <span className="text-[9px] text-[#8B7E74] block">
+                {isCompressing ? "Reduciendo tamaño para guardado ultra rápido..." : "Soporta cualquier imagen PNG, JPG"}
+              </span>
             </div>
           )}
 

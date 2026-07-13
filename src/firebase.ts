@@ -3,7 +3,11 @@ import {
   getAuth, 
   GoogleAuthProvider, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   signInAnonymously,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
   signOut, 
   onAuthStateChanged,
   User
@@ -24,20 +28,12 @@ import {
 } from "firebase/firestore";
 import { Book } from "./types";
 
-// Firebase configuration from the auto-provisioned file
-const firebaseConfig = {
-  apiKey: "AIzaSyBtj7thPax9t4CtTEPuQ5Ui3Z9VajGPAcU",
-  authDomain: "yogic-tangent-37c1c.firebaseapp.com",
-  projectId: "yogic-tangent-37c1c",
-  storageBucket: "yogic-tangent-37c1c.firebasestorage.app",
-  messagingSenderId: "491174110947",
-  appId: "1:491174110947:web:994822ff9c7a6a3e8f87d6"
-};
+import firebaseConfig from "../firebase-applet-config.json";
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const googleProvider = new GoogleAuthProvider();
 
 // Sign in with Google
@@ -47,8 +43,14 @@ export async function loginWithGoogle() {
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
   } catch (error: any) {
-    console.error("Error signing in with Google:", error);
-    throw error;
+    console.warn("Google signInWithPopup failed/blocked, attempting redirect fallback...", error);
+    try {
+      await signInWithRedirect(auth, googleProvider);
+      return null; // Page will redirect; onAuthStateChanged will handle the returned session
+    } catch (redirectError: any) {
+      console.error("Google signInWithRedirect also failed:", redirectError);
+      throw redirectError;
+    }
   }
 }
 
@@ -59,6 +61,28 @@ export async function loginAnonymously() {
     return result.user;
   } catch (error: any) {
     console.error("Error signing in anonymously:", error);
+    throw error;
+  }
+}
+
+// Register with Email and Password
+export async function registerWithEmail(email: string, password: string) {
+  try {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    return result.user;
+  } catch (error: any) {
+    console.error("Error registering with email/password:", error);
+    throw error;
+  }
+}
+
+// Login with Email and Password
+export async function loginWithEmail(email: string, password: string) {
+  try {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    return result.user;
+  } catch (error: any) {
+    console.error("Error logging in with email/password:", error);
     throw error;
   }
 }

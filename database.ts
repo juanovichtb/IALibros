@@ -63,8 +63,7 @@ async function initDb() {
       await ensureMySqlTables();
       return;
     } catch (err: any) {
-      console.error("[DB] Error al conectar a MySQL:", err.message);
-      console.log("[DB] Usando fallback de base de datos JSON local.");
+      console.warn("[DB] MySQL no está activo o configurado (" + err.message + "). Usando fallback de base de datos JSON local.");
       useJsonDb = true;
     }
   } else {
