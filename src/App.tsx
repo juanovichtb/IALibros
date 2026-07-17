@@ -695,19 +695,19 @@ export default function App() {
 
           {/* PERSISTENT BOTTOM SWITCHER NAVIGATION BAR */}
           {view === "tabs" && (
-            <div className="absolute bottom-0 inset-x-0 bg-white border-t border-[#E8E4DE] py-2 px-3 flex justify-around items-center z-40 shadow-lg shrink-0 md:bottom-5 md:left-1/2 md:-translate-x-1/2 md:max-w-lg md:rounded-full md:border md:shadow-xl md:bg-white/95 md:backdrop-blur-xs">
+            <div className="absolute bottom-0 inset-x-0 bg-white border-t border-[#E8E4DE] py-1.5 px-1 flex justify-around items-center z-40 shadow-lg shrink-0 md:py-2 md:px-3 md:bottom-5 md:left-1/2 md:-translate-x-1/2 md:max-w-lg md:rounded-full md:border md:shadow-xl md:bg-white/95 md:backdrop-blur-xs">
               {/* Tab 1: List */}
               <button
                 onClick={() => {
                   setSelectedBook(null);
                   setActiveTab("list");
                 }}
-                className={`flex flex-col items-center gap-1 p-2.5 transition-colors cursor-pointer ${
+                className={`flex-1 md:flex-none flex flex-col items-center gap-0.5 p-1 md:p-2.5 transition-colors cursor-pointer min-w-0 ${
                   activeTab === "list" ? "text-[#C4A484]" : "text-stone-400 hover:text-stone-600"
                 }`}
               >
-                <BookMarked className="w-5 h-5" />
-                <span className="text-[9px] font-bold font-mono tracking-wider uppercase">Biblioteca</span>
+                <BookMarked className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="text-[8px] md:text-[9px] font-bold font-mono tracking-tight md:tracking-wider uppercase truncate max-w-full px-0.5">Biblioteca</span>
               </button>
 
               {/* Tab 2: Add */}
@@ -716,12 +716,12 @@ export default function App() {
                   setSelectedBook(null);
                   setActiveTab("add");
                 }}
-                className={`flex flex-col items-center gap-1 p-2.5 transition-colors cursor-pointer ${
+                className={`flex-1 md:flex-none flex flex-col items-center gap-0.5 p-1 md:p-2.5 transition-colors cursor-pointer min-w-0 ${
                   activeTab === "add" ? "text-[#C4A484]" : "text-stone-400 hover:text-stone-600"
                 }`}
               >
-                <Plus className="w-5 h-5 bg-[#3E3C3A] text-white rounded-full p-0.5 shadow-xs" />
-                <span className="text-[9px] font-bold font-mono tracking-wider uppercase">Registrar</span>
+                <Plus className="w-4 h-4 md:w-5 md:h-5 bg-[#3E3C3A] text-white rounded-full p-0.5 shadow-xs" />
+                <span className="text-[8px] md:text-[9px] font-bold font-mono tracking-tight md:tracking-wider uppercase truncate max-w-full px-0.5">Registrar</span>
               </button>
 
               {/* Tab 3: Stats */}
@@ -730,12 +730,12 @@ export default function App() {
                   setSelectedBook(null);
                   setActiveTab("stats");
                 }}
-                className={`flex flex-col items-center gap-1 p-2.5 transition-colors cursor-pointer ${
+                className={`flex-1 md:flex-none flex flex-col items-center gap-0.5 p-1 md:p-2.5 transition-colors cursor-pointer min-w-0 ${
                   activeTab === "stats" ? "text-[#C4A484]" : "text-stone-400 hover:text-stone-600"
                 }`}
               >
-                <BarChart3 className="w-5 h-5" />
-                <span className="text-[9px] font-bold font-mono tracking-wider uppercase">Estadísticas</span>
+                <BarChart3 className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="text-[8px] md:text-[9px] font-bold font-mono tracking-tight md:tracking-wider uppercase truncate max-w-full px-0.5">Estadísticas</span>
               </button>
 
               {/* Tab 3.5: Comunidad */}
@@ -744,12 +744,12 @@ export default function App() {
                   setSelectedBook(null);
                   setActiveTab("community");
                 }}
-                className={`flex flex-col items-center gap-1 p-2.5 transition-colors cursor-pointer ${
+                className={`flex-1 md:flex-none flex flex-col items-center gap-0.5 p-1 md:p-2.5 transition-colors cursor-pointer min-w-0 ${
                   activeTab === "community" ? "text-[#C4A484]" : "text-stone-400 hover:text-stone-600"
                 }`}
               >
-                <Compass className="w-5 h-5 animate-spin-slow" />
-                <span className="text-[9px] font-bold font-mono tracking-wider uppercase">Comunidad</span>
+                <Compass className="w-4 h-4 md:w-5 md:h-5 animate-spin-slow" />
+                <span className="text-[8px] md:text-[9px] font-bold font-mono tracking-tight md:tracking-wider uppercase truncate max-w-full px-0.5">Comunidad</span>
               </button>
 
               {/* Tab 4: Trivia / Oráculo */}
@@ -758,12 +758,12 @@ export default function App() {
                   setSelectedBook(null);
                   setActiveTab("trivia");
                 }}
-                className={`flex flex-col items-center gap-1 p-2.5 transition-colors cursor-pointer ${
+                className={`flex-1 md:flex-none flex flex-col items-center gap-0.5 p-1 md:p-2.5 transition-colors cursor-pointer min-w-0 ${
                   activeTab === "trivia" ? "text-[#C4A484]" : "text-stone-400 hover:text-stone-600"
                 }`}
               >
-                <Globe className="w-5 h-5" />
-                <span className="text-[9px] font-bold font-mono tracking-wider uppercase">Oráculo</span>
+                <Globe className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="text-[8px] md:text-[9px] font-bold font-mono tracking-tight md:tracking-wider uppercase truncate max-w-full px-0.5">Oráculo</span>
               </button>
 
               {/* Tab 5: Profile */}
@@ -772,7 +772,7 @@ export default function App() {
                   setSelectedBook(null);
                   setActiveTab("profile");
                 }}
-                className={`flex flex-col items-center gap-1 p-2.5 transition-colors cursor-pointer ${
+                className={`flex-1 md:flex-none flex flex-col items-center gap-0.5 p-1 md:p-2.5 transition-colors cursor-pointer min-w-0 ${
                   activeTab === "profile" ? "text-[#C4A484]" : "text-stone-400 hover:text-stone-600"
                 }`}
               >
@@ -780,14 +780,14 @@ export default function App() {
                   <img
                     src={currentUser.photoURL}
                     alt="Perfil"
-                    className={`w-5 h-5 rounded-full object-cover border ${
+                    className={`w-4 h-4 md:w-5 md:h-5 rounded-full object-cover border ${
                       activeTab === "profile" ? "border-[#C4A484]" : "border-transparent"
                     }`}
                   />
                 ) : (
-                  <UserIcon className="w-5 h-5" />
+                  <UserIcon className="w-4 h-4 md:w-5 md:h-5" />
                 )}
-                <span className="text-[9px] font-bold font-mono tracking-wider uppercase">Perfil</span>
+                <span className="text-[8px] md:text-[9px] font-bold font-mono tracking-tight md:tracking-wider uppercase truncate max-w-full px-0.5">Perfil</span>
               </button>
             </div>
           )}
