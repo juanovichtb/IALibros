@@ -194,3 +194,35 @@ export async function deleteBook(bookId: string): Promise<void> {
   const bookRef = doc(db, "books", bookId);
   await deleteDoc(bookRef);
 }
+
+export async function getCommunityBooks(): Promise<any[]> {
+  try {
+    const booksRef = collection(db, "books");
+    const querySnapshot = await getDocs(booksRef);
+    const list: any[] = [];
+    
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      list.push({
+        id: docSnap.id,
+        userId: data.userId || "",
+        title: data.title || "Libro sin título",
+        author: data.author || "Autor Desconocido",
+        cover_url: data.cover_url || "",
+        genre: data.genre || "",
+        start_date: data.start_date || "",
+        end_date: data.end_date || "",
+        notes: data.notes || "",
+        ratings: data.ratings || [],
+        createdAt: data.createdAt?.toDate?.() || new Date()
+      });
+    });
+    
+    // Sort in memory by createdAt descending
+    list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return list;
+  } catch (error) {
+    console.error("Error fetching community books:", error);
+    return [];
+  }
+}

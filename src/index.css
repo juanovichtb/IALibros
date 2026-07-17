@@ -12,6 +12,8 @@
   --color-bento-secondary: #8B7E74;
   --color-bento-border: #E8E4DE;
   --color-bento-dark: #2D2926;
+
+  --animate-spin-slow: spin 12s linear infinite;
 }
 
 body {

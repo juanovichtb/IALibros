@@ -8,6 +8,7 @@ import BookDetailView from "./components/BookDetailView";
 import StatsView from "./components/StatsView";
 import TriviaView from "./components/TriviaView";
 import AboutView from "./components/AboutView";
+import CommunityDashboard from "./components/CommunityDashboard";
 import { 
   BookMarked, 
   Plus, 
@@ -25,7 +26,12 @@ import {
   BookOpen,
   Download,
   Upload,
-  Globe
+  Globe,
+  Compass,
+  Users,
+  Heart,
+  Youtube,
+  ExternalLink
 } from "lucide-react";
 import { 
   auth, 
@@ -37,7 +43,7 @@ import {
 } from "./firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 
-type TabType = "list" | "add" | "stats" | "trivia" | "profile";
+type TabType = "list" | "add" | "stats" | "trivia" | "profile" | "community";
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -178,6 +184,51 @@ export default function App() {
       console.error(err);
       setToast({ message: "Error al guardar el libro", type: "error" });
       throw err;
+    }
+  };
+
+  // Direct registration of curated trending books
+  const handleRegisterBookDirectly = async (bookData: { title: string; author: string; genre: string; cover_url: string; pages: number }) => {
+    if (!currentUser) return;
+    try {
+      const newBookPayload = {
+        reader_id: 1,
+        title: bookData.title,
+        author: bookData.author,
+        genre: bookData.genre,
+        cover_url: bookData.cover_url,
+        pages: bookData.pages,
+        start_date: new Date().toISOString().split("T")[0], // Start reading today!
+        notes: "Añadido desde las tendencias de la comunidad.",
+        ratings: [
+          { category: "historia", stars: 5 },
+          { category: "personajes", stars: 5 },
+          { category: "estilo", stars: 5 },
+          { category: "disfrute", stars: 5 }
+        ]
+      };
+
+      if (currentUser.uid === "guest_local_user") {
+        const localData = localStorage.getItem("diario_lectura_local_books");
+        const localBooks: Book[] = localData ? JSON.parse(localData) : [];
+        const newBook: Book = {
+          ...newBookPayload,
+          id: `local_${Date.now()}`,
+          created_at: new Date().toISOString(),
+          reader_id: 1
+        };
+        localBooks.unshift(newBook);
+        localStorage.setItem("diario_lectura_local_books", JSON.stringify(localBooks));
+        setBooks(localBooks);
+      } else {
+        await addBook(currentUser.uid, newBookPayload);
+        await loadBooks(currentUser.uid);
+      }
+      setToast({ message: `¡"${bookData.title}" añadido a tu biblioteca!`, type: "success" });
+      setActiveTab("list");
+    } catch (err) {
+      console.error("Error adding book directly:", err);
+      setToast({ message: "No se pudo añadir el libro", type: "error" });
     }
   };
 
@@ -407,6 +458,15 @@ export default function App() {
                     <TriviaView books={books} />
                   )}
 
+                  {/* COMUNIDAD Y TENDENCIAS TAB */}
+                  {activeTab === "community" && (
+                    <CommunityDashboard
+                      currentUser={currentUser}
+                      userBooks={books}
+                      onAddBookDirectly={handleRegisterBookDirectly}
+                    />
+                  )}
+
                   {/* PERFIL / CUENTA TAB */}
                   {activeTab === "profile" && (
                     <div className="flex flex-col h-full bg-[#F9F7F2] overflow-hidden">
@@ -495,6 +555,73 @@ export default function App() {
                           </button>
                         </div>
 
+                        {/* PayPal Contribution & Creator Branding Section */}
+                        <div className="bg-white border border-[#E8E4DE] rounded-3xl p-5 shadow-2xs space-y-4">
+                          <div className="flex items-center gap-1.5">
+                            <Heart className="w-3.5 h-3.5 text-[#C4A484] fill-[#C4A484]/10 animate-pulse" />
+                            <span className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[#8B7E74]">
+                              Apoya este santuario lector
+                            </span>
+                          </div>
+                          
+                          <p className="text-[11px] text-[#8B7E74] leading-relaxed">
+                            Si esta app te acompaña en tu camino lector, puedes apoyar su desarrollo y seguir conectado con mis proyectos. Tu contribución voluntaria cuida de este rincón literario.
+                          </p>
+                          
+                          {/* 
+                            ENLACE DE PAYPAL: cambiar aquí si se actualiza en el futuro 
+                          */}
+                          <a
+                            href="https://www.paypal.com/ncp/payment/2FS8SD7C4H8CE"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full flex items-center justify-center gap-1.5 bg-[#C4A484] hover:bg-[#B39373] text-white py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 text-center shadow-3xs"
+                          >
+                            <Heart className="w-3.5 h-3.5 fill-white/10" />
+                            <span>Apoyar este proyecto</span>
+                          </a>
+
+                          {/* Subtle Creator Branding / Continuity Links */}
+                          <div className="pt-3 border-t border-[#F9F7F2] space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] font-mono uppercase font-bold text-[#8B7E74]">
+                                Creado por tecnoicymi
+                              </span>
+                              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" title="Proyecto Activo" />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              {/* 
+                                ENLACE WEB: cambiar aquí si se actualiza en el futuro 
+                              */}
+                              <a
+                                href="https://www.tecnoicymi.com"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 p-2 bg-[#F9F7F2] hover:bg-[#E8E4DE] text-[#3E3C3A] hover:text-[#C4A484] rounded-xl border border-[#E8E4DE]/60 text-[10px] font-medium font-mono transition-colors text-left"
+                              >
+                                <Globe className="w-3 h-3 text-[#C4A484]" />
+                                <span className="truncate">tecnoicymi.com</span>
+                                <ExternalLink className="w-2.5 h-2.5 ml-auto opacity-40" />
+                              </a>
+
+                              {/* 
+                                ENLACE YOUTUBE: cambiar aquí si se actualiza en el futuro 
+                              */}
+                              <a
+                                href="http://www.youtube.com/@tecnoicymi"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 p-2 bg-[#F9F7F2] hover:bg-[#E8E4DE] text-[#3E3C3A] hover:text-red-600 rounded-xl border border-[#E8E4DE]/60 text-[10px] font-medium font-mono transition-colors text-left"
+                              >
+                                <Youtube className="w-3 h-3 text-red-500" />
+                                <span className="truncate">@tecnoicymi</span>
+                                <ExternalLink className="w-2.5 h-2.5 ml-auto opacity-40" />
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+
                         {/* Backup & Safety Controls */}
                         <div className="bg-white border border-[#E8E4DE] rounded-3xl p-5 shadow-2xs space-y-3">
                           <span className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[#8B7E74]">
@@ -568,7 +695,7 @@ export default function App() {
 
           {/* PERSISTENT BOTTOM SWITCHER NAVIGATION BAR */}
           {view === "tabs" && (
-            <div className="absolute bottom-0 inset-x-0 bg-white border-t border-[#E8E4DE] py-2 px-3 flex justify-around items-center z-40 shadow-lg shrink-0 md:bottom-5 md:left-1/2 md:-translate-x-1/2 md:max-w-md md:rounded-full md:border md:shadow-xl md:bg-white/95 md:backdrop-blur-xs">
+            <div className="absolute bottom-0 inset-x-0 bg-white border-t border-[#E8E4DE] py-2 px-3 flex justify-around items-center z-40 shadow-lg shrink-0 md:bottom-5 md:left-1/2 md:-translate-x-1/2 md:max-w-lg md:rounded-full md:border md:shadow-xl md:bg-white/95 md:backdrop-blur-xs">
               {/* Tab 1: List */}
               <button
                 onClick={() => {
@@ -609,6 +736,20 @@ export default function App() {
               >
                 <BarChart3 className="w-5 h-5" />
                 <span className="text-[9px] font-bold font-mono tracking-wider uppercase">Estadísticas</span>
+              </button>
+
+              {/* Tab 3.5: Comunidad */}
+              <button
+                onClick={() => {
+                  setSelectedBook(null);
+                  setActiveTab("community");
+                }}
+                className={`flex flex-col items-center gap-1 p-2.5 transition-colors cursor-pointer ${
+                  activeTab === "community" ? "text-[#C4A484]" : "text-stone-400 hover:text-stone-600"
+                }`}
+              >
+                <Compass className="w-5 h-5 animate-spin-slow" />
+                <span className="text-[9px] font-bold font-mono tracking-wider uppercase">Comunidad</span>
               </button>
 
               {/* Tab 4: Trivia / Oráculo */}

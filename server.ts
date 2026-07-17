@@ -312,6 +312,90 @@ async function startServer() {
     }
   });
 
+  // POST /api/synopsis - Generate a brief, captivating, spoiler-free book synopsis with AI (and local fallback)
+  app.post("/api/synopsis", async (req, res) => {
+    const { title, author } = req.body;
+    if (!title || title.trim() === "") {
+      return res.status(400).json({ error: "El título es obligatorio" });
+    }
+
+    const cleanTitle = title.trim();
+    const cleanAuthor = author ? author.trim() : "Autor Desconocido";
+    const lowerTitle = cleanTitle.toLowerCase();
+    
+    let localSynopsis = "";
+
+    // Curator's Codex of Famous Book Fallbacks
+    if (lowerTitle.includes("quijote") || lowerTitle.includes("cervantes")) {
+      localSynopsis = "En un rincón de la Mancha, un hidalgo enloquecido por las novelas de caballería decide armarse caballero andante para deshacer entuertos y ganarse el amor de la mítica Dulcinea. Junto a su fiel escudero Sancho Panza, emprenderá una aventura cómica y trágica que cuestionará los límites de la realidad y la cordura humana. ¿Te atreves a enfrentar hoy tus propios molinos de viento?";
+    } else if (lowerTitle.includes("cien años") || lowerTitle.includes("soledad") || lowerTitle.includes("gabriel garcía") || lowerTitle.includes("gabo")) {
+      localSynopsis = "La saga mística e ineludible de la familia Buendía a lo largo de siete generaciones en el mítico pueblo caribeño de Macondo. Envolviendo realismo mágico, guerras civiles, amores prohibidos, milagros y una soledad ancestral que marca el destino de sus protagonistas de principio a fin. Un reflejo dorado del alma humana y de la historia latinoamericana. ¿Qué secreto místico aguarda en las páginas que lees hoy?";
+    } else if (lowerTitle.includes("principito") || lowerTitle.includes("saint-exupéry") || lowerTitle.includes("exupery")) {
+      localSynopsis = "Tras quedar varado en el desierto del Sahara, un aviador conoce a un pequeño príncipe venido de un asteroide lejano. A través de sus conversaciones sobre planetas habitados por adultos peculiares, una rosa vanidosa, y un zorro que anhela ser domesticado, redescubrimos las verdades más sencillas y puras de la existencia: lo esencial es invisible a los ojos. Deja que este dulce viaje ablande tu corazón en tu lectura de hoy.";
+    } else if (lowerTitle.includes("sombra del viento") || lowerTitle.includes("ruiz zafón") || lowerTitle.includes("zafon")) {
+      localSynopsis = "En la Barcelona de la posguerra, el joven Daniel Sempere es conducido por su padre al Cementerio de los Libros Olvidados, donde adopta un libro maldito que cambiará su vida para siempre. Una intriga gótica repleta de misterios, amores trágicos, secretos familiares y un homenaje incondicional al poder salvador de la lectura en épocas oscuras. Un laberinto de intrigas te aguarda: ¿continuamos descifrándolo hoy?";
+    } else if (lowerTitle.includes("frankenstein") || lowerTitle.includes("shelley") || lowerTitle.includes("prometeo")) {
+      localSynopsis = "El joven científico Víctor Frankenstein logra vencer a la muerte infundiendo vida a una criatura creada a partir de restos humanos. Sin embargo, horrorizado por su propio éxito, la abandona a su suerte, desatando una trágica odisea de rechazo, soledad, venganza y profundos cuestionamientos sobre la moral de la ciencia y el anhelo inherente de afecto que habita en todo ser viviente. ¿Quién es el verdadero monstruo en esta historia?";
+    } else if (lowerTitle.includes("dracula") || lowerTitle.includes("drácula") || lowerTitle.includes("stoker")) {
+      localSynopsis = "El joven abogado Jonathan Harker viaja al recóndito castillo del Conde Drácula en Transilvania, solo para descubrir que su anfitrión es un vampiro ancestral sediento de sangre y poder que planea invadir Londres. Una obra cumbre de la literatura gótica que explora la inmortalidad, el deseo, la superstición y la eterna batalla entre la luz y la oscuridad. Un clásico inmortal que hiela la sangre e ilumina la imaginación.";
+    } else if (lowerTitle.includes("1984") || lowerTitle.includes("orwell")) {
+      localSynopsis = "En una sociedad totalitaria dominada por el Gran Hermano, la Policía del Pensamiento y la manipulación absoluta de la verdad, Winston Smith se atreve a cometer el crimen más peligroso de todos: enamorarse y conservar un diario secreto. Una perturbadora profecía y profunda advertencia sobre el control social, la censura y la resistencia de la libertad individual ante el poder absoluto. ¿Qué tan libre es tu pensamiento hoy?";
+    } else if (lowerTitle.includes("un mundo feliz") || lowerTitle.includes("huxley") || lowerTitle.includes("brave new world")) {
+      localSynopsis = "Una distopía donde la humanidad es diseñada genéticamente, condicionada psicológicamente y anestesiada con la droga 'soma' para garantizar un orden social perfecto y una felicidad artificial. El choque cultural con un 'salvaje' criado fuera de este sistema pondrá en tela de juicio el precio que estamos dispuestos a pagar por la estabilidad a cambio de nuestra alma, arte y libertad. ¿Preferirías la verdad o el confort?";
+    } else if (lowerTitle.includes("ficciones") || lowerTitle.includes("borges") || lowerTitle.includes("aleph")) {
+      localSynopsis = "El laberíntico e inigualable universo ficcional de Jorge Luis Borges, poblado por bibliotecas infinitas que abarcan el cosmos, espejos que duplican la realidad, laberintos de tiempo, enciclopedias apócrifas y hombres memoriosos. Un banquete intelectual único que expande la mente y redefine los límites de la literatura fantástica mundial. ¿Listo para perderte y encontrarte en las intrincadas veredas de este laberinto hoy?";
+    } else if (lowerTitle.includes("pedro páramo") || lowerTitle.includes("pedro paramo") || lowerTitle.includes("rulfo")) {
+      localSynopsis = "Juan Preciado viaja a Comala en busca de su padre, un cacique llamado Pedro Páramo, pero encuentra un pueblo fantasma habitado únicamente por murmullos de almas en pena y ecos de un pasado violento y desolado. Una obra maestra del realismo mágico hispanoamericano, donde los vivos y los muertos se mezclan en una atmósfera polvorienta y mística suspendida en el tiempo. Déjate envolver por la mística del desierto.";
+    } else if (lowerTitle.includes("rayuela") || lowerTitle.includes("cortázar") || lowerTitle.includes("cortazar")) {
+      localSynopsis = "La revolucionaria contranovela de Julio Cortázar que invita al lector a recorrer, como en el juego infantil de la rayuela, los desvelos de Horacio Oliveira en París y Buenos Aires, buscando la unidad de la vida junto a la Maga. Un canto de jazz literario, repleto de juegos lingüísticos, libertad formal y amor bohemio que cambió la literatura en español para siempre. ¿En qué casillero de tu propia rayuela espiritual te encuentras hoy?";
+    } else if (lowerTitle.includes("metamorfosis") || lowerTitle.includes("kafka")) {
+      localSynopsis = "Al despertar una mañana tras un sueño intranquilo, Gregorio Samsa se encuentra en su cama transformado en un monstruoso insecto. El drama existencial de un hombre atrapado en su propia inutilidad laboral y el progresivo rechazo de su propia familia ante lo incomprensible. Una brillante y desoladora metáfora de la alineación moderna y el desamparo humano ante un mundo frío e indiferente. ¿Cómo afrontarás las transformaciones de la vida hoy?";
+    } else if (lowerTitle.includes("hábitos") || lowerTitle.includes("habitos") || lowerTitle.includes("clear") || lowerTitle.includes("atómicos") || lowerTitle.includes("atomicos")) {
+      localSynopsis = "El aclamado manual de James Clear que demuestra cómo pequeños cambios del 1% diario en nuestras rutinas pueden acumularse para transformar radicalmente nuestras vidas a largo plazo. Mediante bases científicas y ejemplos prácticos, enseña a diseñar sistemas infalibles para eliminar malos hábitos y consolidar conductas de éxito. ¡Registrar tus lecturas en este diario ya es un hábito atómico que transformará tu futuro intelectual!";
+    } else {
+      // Elegant, context-aware generic fallback
+      localSynopsis = `Te adentras en las páginas de "${cleanTitle}" de ${cleanAuthor}, una obra repleta de mundos por descubrir, reflexiones profundas y emociones en estado puro. Cada capítulo es una invitación a expandir tu mente, empatizar con los personajes y desconectarte del ruido exterior para reconectar con lo esencial de la existencia. Esperamos que disfrutes cada línea y que tu jornada de lectura de hoy sea sumamente inspiradora, provechosa y transformadora.`;
+    }
+
+    try {
+      const ai = getGeminiClient();
+      const modelsToTry = ["gemini-3.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"];
+      let lastError: any = null;
+      let textResponse = "";
+
+      const prompt = `Genera una sinopsis atrapante, poética, mística y completamente libre de spoilers (en español, de máximo 3 o 4 líneas) para el libro "${cleanTitle}" escrito por "${cleanAuthor}". Concluye con una pequeña frase motivadora o pregunta para inspirar al lector a continuar con su lectura de hoy.`;
+
+      for (const modelName of modelsToTry) {
+        try {
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: prompt,
+            config: {
+              systemInstruction: "Eres un crítico literario místico, bibliotecario erudito y compañero de lectura empático. Escribes de manera hermosa, poética, inspiradora, libre de spoilers, en español latinoamericano pulcro. Tu misión es entusiasmar al lector para que continúe leyendo.",
+            },
+          });
+          if (response && response.text) {
+            textResponse = response.text;
+            break;
+          }
+        } catch (e: any) {
+          lastError = e;
+          console.warn(`[Server/Synopsis] El modelo ${modelName} falló:`, e.message || e);
+        }
+      }
+
+      if (textResponse) {
+        return res.json({ synopsis: textResponse, isAi: true });
+      }
+
+      throw lastError || new Error("No se pudo obtener respuesta de ningún modelo de IA.");
+    } catch (error: any) {
+      console.warn("[Server/Synopsis] Gemini API no disponible. Usando Códices de Sinopsis Local.");
+      const note = "\n\n*(Alquimia de Códice Local: Conecta tu clave GEMINI_API_KEY en los Ajustes de AI Studio para activar la IA en vivo)*";
+      return res.json({ synopsis: `${localSynopsis}${note}`, isAi: false });
+    }
+  });
+
   // Vite Integration for Serving Frontend
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
